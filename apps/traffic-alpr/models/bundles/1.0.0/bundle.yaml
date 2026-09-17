@@ -7,6 +7,7 @@ models:
     sha256: acbfdfb436a4224dd855a29476a860f595c331535eca1315263444419f545d77
     input_name: input.1
     input_shape: [1, 3, 768, 768]
+    batch: {dynamic: true, minimum: 1, optimal: 1, maximum: 1}
     input_dtype: float32
     color: RGB
     resize: letterbox-top-left
@@ -19,6 +20,7 @@ models:
     sha256: cb4f612ec169ec8eaf119a60ed7812d392512750737f84feff27565d4e449675
     input_name: img
     input_shape: [1, 3, 640, 640]
+    batch: {dynamic: false, minimum: 1, optimal: 1, maximum: 1}
     input_dtype: float32
     color: RGB
     resize: vehicle-roi-letterbox
@@ -31,6 +33,7 @@ models:
     sha256: 86bc30ace8a299c4fe3d5e1ce94a21ef25d0aea2beb7aefaa2041cc4bd917554
     input_name: inputs:0
     input_shape: [1, 32, 156, 3]
+    batch: {dynamic: false, minimum: 1, optimal: 1, maximum: 1}
     input_dtype: float32
     color: BGR
     resize: perspective-rectified

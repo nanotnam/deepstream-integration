@@ -22,7 +22,9 @@ ALPR_MODEL_ROOT=.local/import/axis-alpr/sources \
 ```
 
 Engines are built sequentially and recorded with their source hashes, TensorRT version,
-GPU name, precision, batch, and parser ABI. INT8 builds require pre-generated, verified
+GPU name, precision, batch profile, and parser ABI. Dynamic inputs receive explicit
+TensorRT minimum/optimal/maximum shapes; static inputs are required to use a fixed
+matching batch profile. INT8 builds require pre-generated, verified
 TensorRT calibration caches. Numerical TensorRT comparison remains a GPU-server gate;
 the local tool reports that limitation explicitly rather than pretending CPU validation
 qualifies a TensorRT plan.

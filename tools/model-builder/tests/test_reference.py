@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from ds_model.reference import ALPHABET, BLANK_INDEX, decode_ctc
+from ds_model.reference import ALPHABET, BLANK_INDEX, decode_ctc, decode_ctc_batch
 
 
 def test_ctc_decodes_repeated_characters_deterministically() -> None:
@@ -21,3 +21,6 @@ def test_ctc_decodes_repeated_characters_deterministically() -> None:
     text, confidence = decode_ctc(logits)
     assert text == expected
     assert confidence > 0.99
+    batch = np.concatenate([logits, logits], axis=0)
+    decoded = decode_ctc_batch(batch)
+    assert [item[0] for item in decoded] == [expected, expected]

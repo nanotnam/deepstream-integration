@@ -19,6 +19,10 @@ class ModelContract:
     sha256: str
     input_name: str
     input_shape: tuple[int, ...]
+    dynamic_batch: bool
+    batch_minimum: int
+    batch_optimal: int
+    batch_maximum: int
     input_dtype: str
     color: str
     resize: str
@@ -66,7 +70,7 @@ def load_bundle(path: Path, asset_root: Path, verify_files: bool = True) -> Bund
         if not isinstance(model, dict):
             raise ContractError(f"models.{role} must be a mapping")
         required = (
-            "source", "sha256", "input_name", "input_shape", "input_dtype",
+            "source", "sha256", "input_name", "input_shape", "batch", "input_dtype",
             "color", "resize", "output_names", "mean", "std", "pad_value",
         )
         missing = [key for key in required if key not in model]
@@ -75,6 +79,20 @@ def load_bundle(path: Path, asset_root: Path, verify_files: bool = True) -> Bund
         shape = model["input_shape"]
         if not isinstance(shape, list) or not shape or any(not isinstance(x, int) or x <= 0 for x in shape):
             raise ContractError(f"models.{role}.input_shape must contain positive integers")
+        batch = model["batch"]
+        if (
+            not isinstance(batch, dict)
+            or set(batch) != {"dynamic", "minimum", "optimal", "maximum"}
+            or not isinstance(batch["dynamic"], bool)
+            or any(
+                not isinstance(batch[key], int) or isinstance(batch[key], bool) or batch[key] <= 0
+                for key in ("minimum", "optimal", "maximum")
+            )
+            or not batch["minimum"] <= batch["optimal"] <= batch["maximum"]
+        ):
+            raise ContractError(
+                f"models.{role}.batch must have positive minimum <= optimal <= maximum"
+            )
         digest = model["sha256"]
         if not isinstance(digest, str) or len(digest) != 64 or any(c not in "0123456789abcdef" for c in digest):
             raise ContractError(f"models.{role}.sha256 must be lowercase SHA-256")
@@ -117,6 +135,10 @@ def load_bundle(path: Path, asset_root: Path, verify_files: bool = True) -> Bund
                 sha256=digest,
                 input_name=str(model["input_name"]),
                 input_shape=tuple(shape),
+                dynamic_batch=batch["dynamic"],
+                batch_minimum=batch["minimum"],
+                batch_optimal=batch["optimal"],
+                batch_maximum=batch["maximum"],
                 input_dtype=str(model["input_dtype"]),
                 color=str(model["color"]),
                 resize=str(model["resize"]),
@@ -153,6 +175,19 @@ def validate_onnx_bindings(bundle: Bundle) -> list[dict[str, object]]:
                 raise ContractError(
                     f"{model.role}: input shape {actual_shape} does not match {model.input_shape}"
                 )
+        actual_batch = actual_shape[0]
+        if model.dynamic_batch != (actual_batch == -1):
+            raise ContractError(
+                f"{model.role}: declared dynamic batch does not match ONNX input"
+            )
+        if actual_batch != -1 and (
+            model.batch_minimum != actual_batch
+            or model.batch_optimal != actual_batch
+            or model.batch_maximum != actual_batch
+        ):
+            raise ContractError(
+                f"{model.role}: static batch {actual_batch} requires a fixed matching profile"
+            )
         output_names = tuple(item.name for item in session.get_outputs())
         if output_names != model.output_names:
             raise ContractError(
@@ -168,6 +203,12 @@ def validate_onnx_bindings(bundle: Bundle) -> list[dict[str, object]]:
                 "role": model.role,
                 "input": matching.name,
                 "shape": list(actual_shape),
+                "batch": {
+                    "dynamic": model.dynamic_batch,
+                    "minimum": model.batch_minimum,
+                    "optimal": model.batch_optimal,
+                    "maximum": model.batch_maximum,
+                },
                 "outputs": list(output_names),
             }
         )

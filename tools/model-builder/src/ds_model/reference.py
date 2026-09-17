@@ -47,11 +47,9 @@ def _image_input(model: ModelContract, image_path: Path) -> np.ndarray:
         return np.transpose(normalized, (2, 0, 1))[None, ...]
 
 
-def decode_ctc(logits: np.ndarray) -> tuple[str, float]:
-    if logits.shape != (1, 39, 35):
-        raise ContractError(f"LPR output must be [1,39,35], got {list(logits.shape)}")
-    selected = np.argmax(logits[0], axis=1)
-    probabilities = np.exp(logits[0] - np.max(logits[0], axis=1, keepdims=True))
+def _decode_ctc_sample(logits: np.ndarray) -> tuple[str, float]:
+    selected = np.argmax(logits, axis=1)
+    probabilities = np.exp(logits - np.max(logits, axis=1, keepdims=True))
     probabilities /= np.sum(probabilities, axis=1, keepdims=True)
     text: list[str] = []
     confidences: list[float] = []
@@ -62,6 +60,18 @@ def decode_ctc(logits: np.ndarray) -> tuple[str, float]:
             confidences.append(float(probabilities[step, index]))
         previous = index
     return "".join(text), float(np.mean(confidences)) if confidences else 0.0
+
+
+def decode_ctc_batch(logits: np.ndarray) -> list[tuple[str, float]]:
+    if logits.ndim != 3 or logits.shape[0] < 1 or logits.shape[1:] != (39, 35):
+        raise ContractError(f"LPR output must be [N,39,35], got {list(logits.shape)}")
+    return [_decode_ctc_sample(logits[index]) for index in range(logits.shape[0])]
+
+
+def decode_ctc(logits: np.ndarray) -> tuple[str, float]:
+    if logits.shape != (1, 39, 35):
+        raise ContractError(f"LPR output must be [1,39,35], got {list(logits.shape)}")
+    return decode_ctc_batch(logits)[0]
 
 
 def run_reference(bundle: Bundle, role: str, image_path: Path) -> dict[str, object]:

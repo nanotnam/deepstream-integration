@@ -7,7 +7,7 @@ from dataclasses import asdict
 from hashlib import sha256
 from pathlib import Path
 
-from .contracts import Bundle, ContractError
+from .contracts import Bundle, ContractError, ModelContract
 
 
 def _command_version(executable: str) -> str:
@@ -48,6 +48,11 @@ def engine_key(bundle: Bundle, precision: str, trtexec_version: str, gpu: str) -
     return sha256(material.encode("utf-8")).hexdigest()[:16]
 
 
+def _profile_shape(model: ModelContract, batch_size: int) -> str:
+    shape = (batch_size, *model.input_shape[1:])
+    return f"{model.input_name}:" + "x".join(str(dimension) for dimension in shape)
+
+
 def build_engines(
     bundle: Bundle,
     precision: str,
@@ -74,7 +79,15 @@ def build_engines(
         "schema": "mbfs.tensorrt-engine-set/v1",
         "bundle": bundle.version,
         "precision": precision,
-        "batch": 1,
+        "batch_profiles": {
+            model.role: {
+                "dynamic": model.dynamic_batch,
+                "minimum": model.batch_minimum,
+                "optimal": model.batch_optimal,
+                "maximum": model.batch_maximum,
+            }
+            for model in bundle.models
+        },
         "trtexec": version,
         "gpu": gpu,
         "workspace_mib": workspace_mib,
@@ -91,6 +104,14 @@ def build_engines(
             "--skipInference",
             f"--{precision}",
         ]
+        if model.dynamic_batch:
+            command.extend(
+                [
+                    f"--minShapes={_profile_shape(model, model.batch_minimum)}",
+                    f"--optShapes={_profile_shape(model, model.batch_optimal)}",
+                    f"--maxShapes={_profile_shape(model, model.batch_maximum)}",
+                ]
+            )
         if precision == "int8":
             cache = calibration_cache_dir / f"{model.role}.cache"
             if not cache.is_file():
@@ -103,6 +124,12 @@ def build_engines(
             "file": engine.name,
             "sha256": _file_sha256(engine),
             "source_sha256": model.sha256,
+            "batch": {
+                "dynamic": model.dynamic_batch,
+                "minimum": model.batch_minimum,
+                "optimal": model.batch_optimal,
+                "maximum": model.batch_maximum,
+            },
         }
     (destination / "engine-set.json").write_text(
         json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8"
@@ -116,4 +143,3 @@ def _file_sha256(path: Path) -> str:
         for block in iter(lambda: stream.read(1024 * 1024), b""):
             digest.update(block)
     return digest.hexdigest()
-

@@ -19,6 +19,7 @@ def write_bundle(tmp_path: Path, corrupt: bool = False) -> Path:
             "sha256": "0" * 64 if corrupt else sha256(role.encode()).hexdigest(),
             "input_name": "input",
             "input_shape": [1, 3, 8, 8],
+            "batch": {"dynamic": False, "minimum": 1, "optimal": 1, "maximum": 1},
             "input_dtype": "float32",
             "color": "RGB",
             "resize": "stretch",
@@ -46,6 +47,7 @@ def test_loads_and_verifies_bundle(tmp_path: Path) -> None:
     bundle = load_bundle(write_bundle(tmp_path), tmp_path)
     assert bundle.version == "test"
     assert [model.role for model in bundle.models] == ["vehicle", "plate", "lprnet"]
+    assert all(model.batch_maximum == 1 for model in bundle.models)
 
 
 def test_rejects_checksum_mismatch(tmp_path: Path) -> None:
@@ -59,4 +61,18 @@ def test_rejects_missing_role(tmp_path: Path) -> None:
     del document["models"]["plate"]
     path.write_text(yaml.safe_dump(document), encoding="utf-8")
     with pytest.raises(ContractError, match="exactly"):
+        load_bundle(path, tmp_path)
+
+
+def test_rejects_invalid_batch_profile(tmp_path: Path) -> None:
+    path = write_bundle(tmp_path)
+    document = yaml.safe_load(path.read_text(encoding="utf-8"))
+    document["models"]["plate"]["batch"] = {
+        "dynamic": False,
+        "minimum": 2,
+        "optimal": 1,
+        "maximum": 4,
+    }
+    path.write_text(yaml.safe_dump(document), encoding="utf-8")
+    with pytest.raises(ContractError, match="minimum <= optimal <= maximum"):
         load_bundle(path, tmp_path)
