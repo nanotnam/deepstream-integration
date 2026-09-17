@@ -13,10 +13,12 @@ Required qualification gates:
 
 1. Compile all plugin targets in the pinned DeepStream 9.1 image.
 2. Compare FP16 decoded results with the ONNX CPU reference.
-3. Complete keypoint metadata attachment and GPU rectification wiring.
-4. Run file replay, then the same fixture through MediaMTX RTSP.
-5. Verify Kafka events and five-second health records during broker recovery.
-6. Sustain one 1080p30 source for 30 minutes at 29.5 FPS or better with under one
+3. Bind the `PlateWorker` handler to GPU ROI preprocessing and plate `nvinfer`, then
+   attach decoded boxes/keypoints to their `(frame, track, batch-index)` metadata.
+4. Complete GPU rectification and LPR `nvinfer`; verify every in-zone track receives
+   one plate inference per processed frame.
+5. Run file replay, then the same fixture through MediaMTX RTSP.
+6. Verify Kafka events and five-second health records during broker recovery.
+7. Sustain one 1080p30 source for 30 minutes at 29.5 FPS or better with under one
    percent application drops and stable memory.
-7. Build INT8 only after FP16 passes, then enforce the retained parity gate.
-
+8. Build INT8 only after FP16 passes, then enforce the retained parity gate.

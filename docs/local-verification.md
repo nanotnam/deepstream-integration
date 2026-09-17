@@ -6,10 +6,11 @@ establish the portable baseline; they do not qualify the DeepStream runtime.
 ## Passed locally
 
 - The C++17 workspace configures and builds with CMake.
-- All five native test executables pass. They cover detection decoding and NMS,
-  geometry and OCR, scheduling and voting, event serialization, configuration
-  rejection and URI redaction, and metadata copy ownership.
-- All five Python tests pass. They cover bundle validation, checksum rejection,
+- All six native test executables pass. They cover detection decoding and NMS,
+  geometry and OCR, every-vehicle zone admission, batch splitting, blocking queue
+  behavior, voting, event serialization, configuration rejection and URI redaction,
+  and metadata copy ownership.
+- All six Python tests pass. They cover bundle validation, batch profiles, checksum rejection,
   JSON schemas, and synthetic CTC decoding.
 - The private vehicle, plate, and LPRNet ONNX files match the recorded SHA-256
   checksums and declared input/output bindings.

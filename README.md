@@ -1,7 +1,8 @@
 # DeepStream Integration
 
 An app-centered C++17 workspace for NVIDIA DeepStream pipelines. The first application
-is Traffic ALPR: vehicle detection, tracking, scheduled plate detection, keypoint-based
+is Traffic ALPR: vehicle detection, tracking, every-frame plate detection for every
+in-zone vehicle, keypoint-based
 rectification, LPRNet/CTC recognition, voting, and JSON/Kafka publication.
 
 ```text
@@ -25,6 +26,10 @@ build/apps/traffic-alpr/traffic-alpr \
 
 The local build deliberately cannot run inference. It validates portable behavior and
 fails clearly if asked to execute without a DeepStream-qualified build.
+
+Plate work is lossless at the application boundary: every active tracked vehicle whose
+bottom-center lies inside the recognition zone creates one job per processed frame.
+Batch size controls how jobs are grouped, not whether they are admitted.
 
 ## Private artifacts
 
