@@ -68,6 +68,27 @@ bool decode_lpr_ctc(const TensorView& tensor, OcrResult* result,
   return true;
 }
 
+bool decode_lpr_ctc_batch(const TensorView& tensor,
+                          std::vector<OcrResult>* results,
+                          std::string* error) {
+  results->clear();
+  if (tensor.shape.size() != 3U || tensor.shape[0] <= 0 ||
+      tensor.shape[1] != 39 || tensor.shape[2] != 35) {
+    *error = "batched LPR output must have shape [N,39,35]";
+    return false;
+  }
+  results->reserve(static_cast<size_t>(tensor.shape[0]));
+  for (size_t batch_index = 0U;
+       batch_index < static_cast<size_t>(tensor.shape[0]); ++batch_index) {
+    TensorView slice;
+    if (!tensor_batch_slice(tensor, batch_index, &slice, error)) return false;
+    OcrResult result;
+    if (!decode_lpr_ctc(slice, &result, error)) return false;
+    results->push_back(std::move(result));
+  }
+  return true;
+}
+
 std::string normalize_plate(std::string text) {
   std::string result;
   for (unsigned char value : text) {

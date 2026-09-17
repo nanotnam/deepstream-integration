@@ -4,7 +4,7 @@
   "title": "MBFS ALPR health event",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema", "source_id", "observed_at", "state", "fps", "frames", "publishing", "model_bundle", "precision"],
+  "required": ["schema", "source_id", "observed_at", "state", "fps", "frames", "plate_processing", "lpr_processing", "job_queue", "publishing", "model_bundle", "precision"],
   "properties": {
     "schema": {"const": "mbfs.alpr.health.v1"},
     "source_id": {"type": "string", "minLength": 1},
@@ -14,11 +14,42 @@
     "frames": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["input", "processed", "dropped"],
+      "required": ["input", "processed", "dropped", "configured_skips"],
       "properties": {
         "input": {"type": "integer", "minimum": 0},
         "processed": {"type": "integer", "minimum": 0},
-        "dropped": {"type": "integer", "minimum": 0}
+        "dropped": {"type": "integer", "minimum": 0},
+        "configured_skips": {"type": "integer", "minimum": 0}
+      }
+    },
+    "plate_processing": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["jobs_created", "jobs_completed", "inference_failures", "vehicles_exited_without_inference", "batch_histogram"],
+      "properties": {
+        "jobs_created": {"type": "integer", "minimum": 0},
+        "jobs_completed": {"type": "integer", "minimum": 0},
+        "inference_failures": {"type": "integer", "minimum": 0},
+        "vehicles_exited_without_inference": {"type": "integer", "minimum": 0},
+        "batch_histogram": {"$ref": "#/$defs/batch_histogram"}
+      }
+    },
+    "lpr_processing": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["batch_histogram"],
+      "properties": {"batch_histogram": {"$ref": "#/$defs/batch_histogram"}}
+    },
+    "job_queue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["depth", "maximum_depth", "blocked_pushes", "blocked_nanoseconds", "oldest_job_age_nanoseconds"],
+      "properties": {
+        "depth": {"type": "integer", "minimum": 0},
+        "maximum_depth": {"type": "integer", "minimum": 0},
+        "blocked_pushes": {"type": "integer", "minimum": 0},
+        "blocked_nanoseconds": {"type": "integer", "minimum": 0},
+        "oldest_job_age_nanoseconds": {"type": "integer", "minimum": 0}
       }
     },
     "publishing": {
@@ -32,6 +63,12 @@
     },
     "model_bundle": {"type": "string", "minLength": 1},
     "precision": {"enum": ["fp16", "int8"]}
+  },
+  "$defs": {
+    "batch_histogram": {
+      "type": "object",
+      "propertyNames": {"pattern": "^[1-9][0-9]*$"},
+      "additionalProperties": {"type": "integer", "minimum": 0}
+    }
   }
 }
-

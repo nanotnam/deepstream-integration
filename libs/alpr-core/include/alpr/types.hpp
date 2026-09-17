@@ -3,7 +3,6 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
-#include <optional>
 #include <string>
 #include <vector>
 
@@ -68,10 +67,6 @@ struct Settings {
   float plate_threshold{0.3F};
   float vehicle_iou_threshold{0.3F};
   float plate_iou_threshold{0.4F};
-  size_t max_plate_jobs_per_frame{3};
-  size_t max_lpr_jobs_per_frame{2};
-  size_t plate_cache_frames{12};
-  size_t lpr_retry_frames{8};
   size_t minimum_finalize_observations{3};
   size_t maximum_values_per_index{10};
   float character_lock_confidence{0.9F};
@@ -82,24 +77,19 @@ struct Settings {
 struct TrackedVehicle {
   uint64_t track_id{0};
   Detection detection;
-  bool eligible{false};
-  bool newly_created{false};
-  bool finalized{false};
-  size_t waiting_frames{0};
-  size_t last_plate_frame{0};
-  size_t last_lpr_frame{0};
-  std::optional<PlateDetection> plate;
+  bool active{true};
 };
 
-struct WorkSelection {
-  std::vector<uint64_t> plate_track_ids;
-  std::vector<uint64_t> lpr_track_ids;
-  size_t eligible{0};
-  size_t deferred_plate{0};
-  size_t deferred_lpr{0};
-  size_t cached{0};
-  size_t finalized_suppressed{0};
+struct PlateJob {
+  std::string source_id;
+  uint64_t frame_number{0};
+  uint64_t frame_pts_ns{0};
+  uint64_t track_id{0};
+  Detection vehicle;
+};
+
+struct PlateBatch {
+  std::vector<PlateJob> jobs;
 };
 
 }  // namespace alpr
-

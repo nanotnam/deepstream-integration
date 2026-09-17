@@ -276,6 +276,43 @@ bool decode_plate_scrfd(uint32_t source_width, uint32_t source_height,
   return true;
 }
 
+bool decode_plate_scrfd_batch(
+    const std::vector<PlateDecodeContext>& contexts,
+    const std::vector<TensorView>& outputs, const Settings& settings,
+    std::vector<std::optional<PlateDetection>>* plates, std::string* error) {
+  plates->clear();
+  if (contexts.empty() || outputs.empty()) {
+    *error = "plate batch requires contexts and output tensors";
+    return false;
+  }
+  const size_t batch_size = contexts.size();
+  for (const TensorView& output : outputs) {
+    if (output.shape.empty() || output.shape.front() != static_cast<int64_t>(batch_size)) {
+      *error = "plate output batch does not match decode contexts";
+      return false;
+    }
+  }
+  plates->reserve(batch_size);
+  for (size_t batch_index = 0U; batch_index < batch_size; ++batch_index) {
+    std::vector<TensorView> slices;
+    slices.reserve(outputs.size());
+    for (const TensorView& output : outputs) {
+      TensorView slice;
+      if (!tensor_batch_slice(output, batch_index, &slice, error)) return false;
+      slices.push_back(std::move(slice));
+    }
+    PlateDetection plate;
+    bool found = false;
+    const PlateDecodeContext& context = contexts[batch_index];
+    if (!decode_plate_scrfd(context.source_width, context.source_height,
+                            context.transform, slices, settings, &plate, &found,
+                            error)) return false;
+    plates->push_back(found ? std::optional<PlateDetection>(std::move(plate))
+                            : std::nullopt);
+  }
+  return true;
+}
+
 void map_plate_to_source(const Box& region, PlateDetection* plate) {
   Box& box = plate->detection.box;
   box.x = region.x + box.x * region.width;

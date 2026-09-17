@@ -26,6 +26,7 @@ struct TensorView {
 bool validate_tensor(const TensorView& tensor, size_t* element_count,
                      std::string* error);
 float tensor_value(const TensorView& tensor, size_t index);
+bool tensor_batch_slice(const TensorView& tensor, size_t batch_index,
+                        TensorView* slice, std::string* error);
 
 }  // namespace alpr
-

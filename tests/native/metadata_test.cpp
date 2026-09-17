@@ -3,6 +3,17 @@
 #include <cassert>
 
 int main() {
+  deepstream_runtime::PlateJobMetadata job;
+  job.source_id = "source";
+  job.frame_number = 9U;
+  job.track_id = 42U;
+  job.batch_index = 3U;
+  deepstream_runtime::OwnedMetadata<deepstream_runtime::PlateJobMetadata> owned_job(job);
+  auto copied_job = owned_job;
+  copied_job.get().track_id = 43U;
+  assert(owned_job.get().track_id == 42U);
+  assert(copied_job.get().track_id == 43U);
+
   deepstream_runtime::PlateKeypointsMetadata metadata;
   metadata.points[0] = {0.1F, 0.2F};
   deepstream_runtime::OwnedMetadata<deepstream_runtime::PlateKeypointsMetadata> first(metadata);

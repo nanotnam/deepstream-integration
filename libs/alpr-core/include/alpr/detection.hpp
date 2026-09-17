@@ -3,6 +3,7 @@
 #include "alpr/tensor.hpp"
 #include "alpr/types.hpp"
 
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -24,7 +25,17 @@ bool decode_plate_scrfd(uint32_t source_width, uint32_t source_height,
                         const Settings& settings, PlateDetection* plate,
                         bool* found, std::string* error);
 
+struct PlateDecodeContext {
+  uint32_t source_width{0};
+  uint32_t source_height{0};
+  ImageTransform transform;
+};
+
+bool decode_plate_scrfd_batch(
+    const std::vector<PlateDecodeContext>& contexts,
+    const std::vector<TensorView>& outputs, const Settings& settings,
+    std::vector<std::optional<PlateDetection>>* plates, std::string* error);
+
 void map_plate_to_source(const Box& region, PlateDetection* plate);
 
 }  // namespace alpr
-

@@ -19,6 +19,9 @@ inline constexpr size_t kLprBlankIndex = 34;
 
 bool decode_lpr_ctc(const TensorView& tensor, OcrResult* result,
                     std::string* error);
+bool decode_lpr_ctc_batch(const TensorView& tensor,
+                          std::vector<OcrResult>* results,
+                          std::string* error);
 std::string normalize_plate(std::string text);
 std::optional<std::string> format_vietnam_plate(const std::string& text,
                                                 bool prefer_car = false);
@@ -58,4 +61,3 @@ class PlateRegistry {
 };
 
 }  // namespace alpr
-

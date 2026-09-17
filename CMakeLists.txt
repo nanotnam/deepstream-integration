@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.20)
 project(deepstream_integration VERSION 0.1.0 LANGUAGES CXX)
 
+find_package(Threads REQUIRED)
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -26,4 +28,3 @@ if(BUILD_TESTING)
   enable_testing()
   add_subdirectory(tests/native)
 endif()
-

@@ -1,74 +1,108 @@
 #include "alpr/scheduler.hpp"
 
 #include <algorithm>
+#include <cmath>
+#include <stdexcept>
 #include <utility>
 
 namespace alpr {
 namespace {
 
-int priority(const TrackedVehicle& track, size_t frame_index, size_t cache_frames) {
-  if (track.newly_created) return 0;
-  if (!track.plate) return 1;
-  if (frame_index >= track.last_plate_frame + cache_frames) return 2;
-  return 3;
+bool on_segment(const Point& point, const Point& first, const Point& second) {
+  constexpr float kEpsilon = 1.0e-6F;
+  const float cross = (point.y - first.y) * (second.x - first.x) -
+                      (point.x - first.x) * (second.y - first.y);
+  if (std::fabs(cross) > kEpsilon) return false;
+  return point.x >= std::min(first.x, second.x) - kEpsilon &&
+         point.x <= std::max(first.x, second.x) + kEpsilon &&
+         point.y >= std::min(first.y, second.y) - kEpsilon &&
+         point.y <= std::max(first.y, second.y) + kEpsilon;
 }
 
 }  // namespace
 
-InferenceScheduler::InferenceScheduler(Settings settings)
-    : settings_(std::move(settings)) {}
-
-WorkSelection InferenceScheduler::select(std::vector<TrackedVehicle*> tracks,
-                                         size_t frame_index) const {
-  WorkSelection result;
-  std::vector<TrackedVehicle*> eligible;
-  for (TrackedVehicle* track : tracks) {
-    if (track == nullptr || !track->eligible) continue;
-    ++result.eligible;
-    if (track->finalized) {
-      ++result.finalized_suppressed;
-      continue;
-    }
-    eligible.push_back(track);
-  }
-  std::stable_sort(eligible.begin(), eligible.end(), [&](const TrackedVehicle* lhs,
-                                                         const TrackedVehicle* rhs) {
-    const int lhs_priority = priority(*lhs, frame_index, settings_.plate_cache_frames);
-    const int rhs_priority = priority(*rhs, frame_index, settings_.plate_cache_frames);
-    if (lhs_priority != rhs_priority) return lhs_priority < rhs_priority;
-    if (lhs->waiting_frames != rhs->waiting_frames) {
-      return lhs->waiting_frames > rhs->waiting_frames;
-    }
-    if (lhs->detection.score != rhs->detection.score) {
-      return lhs->detection.score > rhs->detection.score;
-    }
-    return lhs->track_id < rhs->track_id;
-  });
-
-  for (TrackedVehicle* track : eligible) {
-    const bool plate_stale = !track->plate ||
-        frame_index >= track->last_plate_frame + settings_.plate_cache_frames;
-    if (plate_stale &&
-        result.plate_track_ids.size() < settings_.max_plate_jobs_per_frame) {
-      result.plate_track_ids.push_back(track->track_id);
-    } else if (plate_stale) {
-      ++result.deferred_plate;
-    } else {
-      ++result.cached;
-      const bool lpr_due = frame_index >= track->last_lpr_frame + settings_.lpr_retry_frames;
-      if (lpr_due && result.lpr_track_ids.size() < settings_.max_lpr_jobs_per_frame) {
-        result.lpr_track_ids.push_back(track->track_id);
-      } else if (lpr_due) {
-        ++result.deferred_lpr;
-      }
+bool point_in_polygon(const Point& point, const std::vector<Point>& polygon) {
+  if (polygon.size() < 3U) return false;
+  bool inside = false;
+  for (size_t current = 0U, previous = polygon.size() - 1U;
+       current < polygon.size(); previous = current++) {
+    const Point& first = polygon[previous];
+    const Point& second = polygon[current];
+    if (on_segment(point, first, second)) return true;
+    const bool crosses = (first.y > point.y) != (second.y > point.y);
+    if (crosses) {
+      const float intersection_x = first.x +
+          (point.y - first.y) * (second.x - first.x) / (second.y - first.y);
+      if (intersection_x > point.x) inside = !inside;
     }
   }
-  return result;
+  return inside;
 }
 
-void InferenceScheduler::update(Settings settings) {
-  settings_ = std::move(settings);
+bool vehicle_in_zone(const Detection& vehicle, const std::vector<Point>& zone) {
+  const Point bottom_center{vehicle.box.x + vehicle.box.width * 0.5F,
+                            vehicle.box.y + vehicle.box.height};
+  return point_in_polygon(bottom_center, zone);
+}
+
+EveryVehiclePlanner::EveryVehiclePlanner(std::vector<Point> recognition_zone)
+    : recognition_zone_(std::move(recognition_zone)) {}
+
+std::vector<PlateJob> EveryVehiclePlanner::plan(
+    const std::string& source_id, uint64_t frame_number, uint64_t frame_pts_ns,
+    const std::vector<TrackedVehicle>& tracks) const {
+  std::vector<PlateJob> jobs;
+  jobs.reserve(tracks.size());
+  for (const TrackedVehicle& track : tracks) {
+    if (!track.active || !vehicle_in_zone(track.detection, recognition_zone_)) continue;
+    jobs.push_back({source_id, frame_number, frame_pts_ns, track.track_id,
+                    track.detection});
+  }
+  return jobs;
+}
+
+void EveryVehiclePlanner::update_zone(std::vector<Point> recognition_zone) {
+  recognition_zone_ = std::move(recognition_zone);
+}
+
+std::vector<PlateBatch> split_plate_batches(std::vector<PlateJob> jobs,
+                                             size_t batch_size) {
+  if (batch_size == 0U) throw std::invalid_argument("batch size must be positive");
+  std::vector<PlateBatch> batches;
+  for (size_t begin = 0U; begin < jobs.size(); begin += batch_size) {
+    const size_t end = std::min(begin + batch_size, jobs.size());
+    PlateBatch batch;
+    batch.jobs.reserve(end - begin);
+    for (size_t index = begin; index < end; ++index) {
+      batch.jobs.push_back(std::move(jobs[index]));
+    }
+    batches.push_back(std::move(batch));
+  }
+  return batches;
+}
+
+FrameRateGate::FrameRateGate(double maximum_fps) { reset(maximum_fps); }
+
+bool FrameRateGate::accept(uint64_t frame_pts_ns) {
+  if (interval_ns_ == 0U) return true;
+  if (!has_accepted_ || frame_pts_ns < last_accepted_pts_ns_ ||
+      frame_pts_ns - last_accepted_pts_ns_ >= interval_ns_) {
+    has_accepted_ = true;
+    last_accepted_pts_ns_ = frame_pts_ns;
+    return true;
+  }
+  return false;
+}
+
+void FrameRateGate::reset(double maximum_fps) {
+  if (!std::isfinite(maximum_fps) || maximum_fps < 0.0) {
+    throw std::invalid_argument("maximum FPS must be finite and non-negative");
+  }
+  interval_ns_ = maximum_fps == 0.0
+      ? 0U
+      : static_cast<uint64_t>(std::llround(1000000000.0 / maximum_fps));
+  last_accepted_pts_ns_ = 0U;
+  has_accepted_ = false;
 }
 
 }  // namespace alpr
-

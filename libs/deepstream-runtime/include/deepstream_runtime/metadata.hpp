@@ -9,6 +9,15 @@
 
 namespace deepstream_runtime {
 
+struct PlateJobMetadata {
+  std::string source_id;
+  uint64_t frame_number{0};
+  uint64_t frame_pts_ns{0};
+  uint64_t track_id{0};
+  size_t batch_index{0};
+  alpr::Detection vehicle;
+};
+
 struct PlateKeypointsMetadata {
   std::array<alpr::Point, 5> points{};
 };
@@ -46,4 +55,3 @@ class OwnedMetadata {
 FinalEventMetadata make_final_event_metadata(alpr::AlprEvent event);
 
 }  // namespace deepstream_runtime
-

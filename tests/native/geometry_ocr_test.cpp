@@ -44,6 +44,15 @@ int main() {
   assert(alpr::decode_lpr_ctc(logits.view(), &result, &error));
   assert(result.text == expected);
   assert(result.confidence > 0.99F);
+  FloatTensor batched_logits{"lpr", {2, 39, 35}, {}};
+  batched_logits.values.insert(batched_logits.values.end(), logits.values.begin(),
+                               logits.values.end());
+  batched_logits.values.insert(batched_logits.values.end(), logits.values.begin(),
+                               logits.values.end());
+  std::vector<alpr::OcrResult> batch_results;
+  assert(alpr::decode_lpr_ctc_batch(batched_logits.view(), &batch_results, &error));
+  assert(batch_results.size() == 2U);
+  assert(batch_results[0].text == expected && batch_results[1].text == expected);
   assert(alpr::normalize_plate("89-aa 15689") == expected);
   assert(alpr::format_vietnam_plate(expected).value() == "89AA 15689");
 
@@ -55,4 +64,3 @@ int main() {
   assert(vote.finalize(3U).value() == "89AA 15689");
   return 0;
 }
-

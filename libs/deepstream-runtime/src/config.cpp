@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <charconv>
 #include <cctype>
+#include <cmath>
 #include <fstream>
 #include <map>
 #include <set>
@@ -184,10 +185,10 @@ bool set_values(const std::map<std::string, std::string>& values,
       "schema", "source.id", "source.type", "source.uri", "source.uri_env",
       "source.width", "source.height", "source.framerate", "source.latency_ms",
       "models.bundle", "models.precision", "models.engine_root", "tracker.type",
-      "tracker.config", "alpr.vehicle_threshold", "alpr.plate_threshold",
+      "tracker.config", "processing.max_fps", "processing.plate_batch_size",
+      "processing.lpr_batch_size", "processing.job_queue_capacity",
+      "processing.queue_overflow", "alpr.vehicle_threshold", "alpr.plate_threshold",
       "alpr.vehicle_iou_threshold", "alpr.plate_iou_threshold",
-      "alpr.max_plate_jobs_per_frame", "alpr.max_lpr_jobs_per_frame",
-      "alpr.plate_cache_frames", "alpr.lpr_retry_frames",
       "alpr.minimum_finalize_observations", "alpr.maximum_values_per_index",
       "alpr.character_lock_confidence", "alpr.recognition_zone",
       "outputs.stdout.enabled", "outputs.kafka.enabled", "outputs.kafka.brokers_env",
@@ -237,6 +238,16 @@ bool set_values(const std::map<std::string, std::string>& values,
   if (const auto* value = get("models.engine_root")) config->models.engine_root = *value;
   if (const auto* value = get("tracker.type")) config->tracker.type = *value;
   if (const auto* value = get("tracker.config")) config->tracker.config = *value;
+  if (const auto* value = get("processing.max_fps");
+      value && !double_value(*value, &config->processing.max_fps)) {
+    *error = "processing.max_fps must be numeric"; return false;
+  }
+  if (const auto* value = get("processing.queue_overflow")) {
+    if (*value != "block") {
+      *error = "processing.queue_overflow must be block"; return false;
+    }
+    config->processing.queue_overflow = QueueOverflow::kBlock;
+  }
 
 #define SET_FLOAT(KEY, FIELD) \
   if (const auto* value = get(KEY); value && !float_value(*value, &FIELD)) { \
@@ -250,10 +261,9 @@ bool set_values(const std::map<std::string, std::string>& values,
   SET_FLOAT("alpr.plate_threshold", config->alpr.plate_threshold)
   SET_FLOAT("alpr.vehicle_iou_threshold", config->alpr.vehicle_iou_threshold)
   SET_FLOAT("alpr.plate_iou_threshold", config->alpr.plate_iou_threshold)
-  SET_SIZE("alpr.max_plate_jobs_per_frame", config->alpr.max_plate_jobs_per_frame)
-  SET_SIZE("alpr.max_lpr_jobs_per_frame", config->alpr.max_lpr_jobs_per_frame)
-  SET_SIZE("alpr.plate_cache_frames", config->alpr.plate_cache_frames)
-  SET_SIZE("alpr.lpr_retry_frames", config->alpr.lpr_retry_frames)
+  SET_SIZE("processing.plate_batch_size", config->processing.plate_batch_size)
+  SET_SIZE("processing.lpr_batch_size", config->processing.lpr_batch_size)
+  SET_SIZE("processing.job_queue_capacity", config->processing.job_queue_capacity)
   SET_SIZE("alpr.minimum_finalize_observations", config->alpr.minimum_finalize_observations)
   SET_SIZE("alpr.maximum_values_per_index", config->alpr.maximum_values_per_index)
   SET_FLOAT("alpr.character_lock_confidence", config->alpr.character_lock_confidence)
@@ -330,6 +340,22 @@ bool validate_pipeline_config(const PipelineConfig& config, std::string* error) 
     *error = "tracker.type must be nvdcf and tracker.config is required";
     return false;
   }
+  if (!std::isfinite(config.processing.max_fps) || config.processing.max_fps < 0.0 ||
+      config.processing.max_fps > 240.0) {
+    *error = "processing.max_fps must be in [0,240]";
+    return false;
+  }
+  if (config.processing.plate_batch_size == 0U ||
+      config.processing.lpr_batch_size == 0U ||
+      config.processing.job_queue_capacity == 0U) {
+    *error = "processing batch sizes and queue capacity must be positive";
+    return false;
+  }
+  if (config.processing.job_queue_capacity < config.processing.plate_batch_size ||
+      config.processing.job_queue_capacity < config.processing.lpr_batch_size) {
+    *error = "processing.job_queue_capacity must cover both batch sizes";
+    return false;
+  }
   const auto probability = [](float value) { return value >= 0.0F && value <= 1.0F; };
   if (!probability(config.alpr.vehicle_threshold) ||
       !probability(config.alpr.plate_threshold) ||
@@ -339,12 +365,10 @@ bool validate_pipeline_config(const PipelineConfig& config, std::string* error) 
     *error = "ALPR thresholds must be in [0,1]";
     return false;
   }
-  if (config.alpr.max_plate_jobs_per_frame == 0U ||
-      config.alpr.max_lpr_jobs_per_frame == 0U ||
-      config.alpr.minimum_finalize_observations == 0U ||
+  if (config.alpr.minimum_finalize_observations == 0U ||
       config.alpr.maximum_values_per_index == 0U ||
       config.alpr.recognition_zone.size() < 3U) {
-    *error = "ALPR budgets, observation counts, and recognition zone must be non-zero";
+    *error = "ALPR observation counts and recognition zone must be non-zero";
     return false;
   }
   for (const alpr::Point& point : config.alpr.recognition_zone) {
@@ -400,6 +424,11 @@ std::string precision_name(Precision precision) {
 
 std::string source_type_name(SourceType source_type) {
   return source_type == SourceType::kFile ? "file" : "rtsp";
+}
+
+std::string queue_overflow_name(QueueOverflow overflow) {
+  static_cast<void>(overflow);
+  return "block";
 }
 
 }  // namespace deepstream_runtime

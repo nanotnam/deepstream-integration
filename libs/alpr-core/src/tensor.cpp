@@ -47,5 +47,22 @@ float tensor_value(const TensorView& tensor, size_t index) {
   return (value - tensor.quantization.zero_point) * tensor.quantization.scale;
 }
 
-}  // namespace alpr
+bool tensor_batch_slice(const TensorView& tensor, size_t batch_index,
+                        TensorView* slice, std::string* error) {
+  size_t element_count = 0U;
+  if (!validate_tensor(tensor, &element_count, error)) return false;
+  const size_t batch_size = static_cast<size_t>(tensor.shape.front());
+  if (batch_index >= batch_size || element_count % batch_size != 0U) {
+    *error = "tensor batch slice is out of range";
+    return false;
+  }
+  const size_t element_size = tensor.data_type == DataType::kFloat32 ? sizeof(float) : 1U;
+  const size_t sample_bytes = element_count / batch_size * element_size;
+  *slice = tensor;
+  slice->shape.front() = 1;
+  slice->data = static_cast<const uint8_t*>(tensor.data) + batch_index * sample_bytes;
+  slice->byte_size = sample_bytes;
+  return true;
+}
 
+}  // namespace alpr

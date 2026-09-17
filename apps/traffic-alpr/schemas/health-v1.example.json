@@ -4,9 +4,23 @@
   "observed_at": "2026-09-17T00:00:00Z",
   "state": "running",
   "fps": 30.0,
-  "frames": {"input": 300, "processed": 299, "dropped": 1},
+  "frames": {"input": 300, "processed": 299, "dropped": 0, "configured_skips": 1},
+  "plate_processing": {
+    "jobs_created": 624,
+    "jobs_completed": 624,
+    "inference_failures": 0,
+    "vehicles_exited_without_inference": 0,
+    "batch_histogram": {"1": 624}
+  },
+  "lpr_processing": {"batch_histogram": {"1": 91}},
+  "job_queue": {
+    "depth": 0,
+    "maximum_depth": 7,
+    "blocked_pushes": 0,
+    "blocked_nanoseconds": 0,
+    "oldest_job_age_nanoseconds": 0
+  },
   "publishing": {"events": 2, "failures": 0},
   "model_bundle": "1.0.0",
   "precision": "fp16"
 }
-

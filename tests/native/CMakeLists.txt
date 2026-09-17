@@ -12,4 +12,4 @@ native_test(geometry_ocr_test)
 native_test(scheduling_event_test)
 native_test(config_test)
 native_test(metadata_test)
-
+native_test(job_queue_test)

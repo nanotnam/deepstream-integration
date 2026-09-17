@@ -34,6 +34,7 @@ int main() {
   assert(alpr::decode_plate_scrfd(100U, 100U, transform, outputs, settings,
                                   &plate, &found, &error));
   assert(found);
+
   assert(plate.detection.score > 0.99F);
 
   FloatTensor nchw_scores{"plate_scores", {1, 2, 1, 1}, {5.0F, -5.0F}};
@@ -45,6 +46,24 @@ int main() {
   assert(alpr::decode_plate_scrfd(100U, 100U, transform, outputs, settings,
                                   &plate, &found, &error));
   assert(found);
+
+  FloatTensor batch_scores{"plate_scores", {2, 2, 1, 1},
+                           {5.0F, -5.0F, 5.0F, -5.0F}};
+  FloatTensor batch_boxes{"plate_boxes", {2, 8, 1, 1}, {}};
+  batch_boxes.values.insert(batch_boxes.values.end(), nchw_boxes.values.begin(),
+                            nchw_boxes.values.end());
+  batch_boxes.values.insert(batch_boxes.values.end(), nchw_boxes.values.begin(),
+                            nchw_boxes.values.end());
+  FloatTensor batch_keypoints{"keypoints", {2, 20, 1, 1},
+                              std::vector<float>(40U, 0.1F)};
+  outputs = {batch_scores.view(), batch_boxes.view(), batch_keypoints.view()};
+  const std::vector<alpr::PlateDecodeContext> contexts{
+      {100U, 100U, transform}, {100U, 100U, transform}};
+  std::vector<std::optional<alpr::PlateDetection>> batch_plates;
+  assert(alpr::decode_plate_scrfd_batch(contexts, outputs, settings, &batch_plates,
+                                        &error));
+  assert(batch_plates.size() == 2U);
+  assert(batch_plates[0].has_value() && batch_plates[1].has_value());
 
   const alpr::Box region{0.25F, 0.25F, 0.5F, 0.5F};
   alpr::map_plate_to_source(region, &plate);

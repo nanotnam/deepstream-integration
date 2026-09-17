@@ -53,6 +53,19 @@ std::string stable_material(const AlprEvent& event) {
          std::to_string(event.frame_pts_ns) + "\n" + normalize_plate(event.plate_text);
 }
 
+std::string histogram_json(const std::map<size_t, uint64_t>& histogram) {
+  std::ostringstream stream;
+  stream << '{';
+  bool first = true;
+  for (const auto& [size, count] : histogram) {
+    if (!first) stream << ',';
+    first = false;
+    stream << '\"' << size << "\":" << count;
+  }
+  stream << '}';
+  return stream.str();
+}
+
 }  // namespace
 
 std::string deterministic_event_id(const AlprEvent& event) {
@@ -96,6 +109,22 @@ std::string health_json(const HealthEvent& event) {
          << ",\"frames\":{\"input\":" << event.frames_input
          << ",\"processed\":" << event.frames_processed
          << ",\"dropped\":" << event.frames_dropped
+         << ",\"configured_skips\":" << event.configured_frame_skips
+         << "},\"plate_processing\":{\"jobs_created\":"
+         << event.plate_jobs_created
+         << ",\"jobs_completed\":" << event.plate_jobs_completed
+         << ",\"inference_failures\":" << event.plate_inference_failures
+         << ",\"vehicles_exited_without_inference\":"
+         << event.vehicles_exited_without_inference
+         << ",\"batch_histogram\":" << histogram_json(event.plate_batch_histogram)
+         << "},\"lpr_processing\":{\"batch_histogram\":"
+         << histogram_json(event.lpr_batch_histogram)
+         << "},\"job_queue\":{\"depth\":" << event.queue_depth
+         << ",\"maximum_depth\":" << event.queue_maximum_depth
+         << ",\"blocked_pushes\":" << event.queue_blocked_pushes
+         << ",\"blocked_nanoseconds\":" << event.queue_blocked_nanoseconds
+         << ",\"oldest_job_age_nanoseconds\":"
+         << event.queue_oldest_job_age_nanoseconds
          << "},\"publishing\":{\"events\":" << event.events_published
          << ",\"failures\":" << event.publish_failures
          << "},\"model_bundle\":\"" << escape_json(event.model_bundle)

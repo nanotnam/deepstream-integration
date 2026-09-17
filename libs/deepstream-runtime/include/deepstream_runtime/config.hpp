@@ -34,6 +34,16 @@ struct TrackerConfig {
   std::filesystem::path config;
 };
 
+enum class QueueOverflow { kBlock };
+
+struct ProcessingConfig {
+  double max_fps{0.0};
+  size_t plate_batch_size{1};
+  size_t lpr_batch_size{1};
+  size_t job_queue_capacity{256};
+  QueueOverflow queue_overflow{QueueOverflow::kBlock};
+};
+
 struct KafkaConfig {
   bool enabled{true};
   std::string brokers_env{"ALPR_KAFKA_BROKERS"};
@@ -55,6 +65,7 @@ struct PipelineConfig {
   SourceConfig source;
   ModelConfig models;
   TrackerConfig tracker;
+  ProcessingConfig processing;
   alpr::Settings alpr;
   OutputConfig outputs;
   HealthConfig health;
@@ -70,6 +81,6 @@ bool resolve_source_uri(const PipelineConfig& config, const EnvironmentLookup& l
 std::string redact_uri(const std::string& uri);
 std::string precision_name(Precision precision);
 std::string source_type_name(SourceType source_type);
+std::string queue_overflow_name(QueueOverflow overflow);
 
 }  // namespace deepstream_runtime
-

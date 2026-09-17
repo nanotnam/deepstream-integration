@@ -45,7 +45,15 @@ int main(int argc, char** argv) {
   if (validate_only) {
     std::cout << "{\"schema\":\"mbfs.alpr.cli-result.v1\","
                  "\"status\":\"valid\",\"source_id\":\""
-              << config.source.id << "\"}\n";
+              << config.source.id << "\",\"processing\":{\"max_fps\":"
+              << config.processing.max_fps << ",\"plate_batch_size\":"
+              << config.processing.plate_batch_size << ",\"lpr_batch_size\":"
+              << config.processing.lpr_batch_size << ",\"job_queue_capacity\":"
+              << config.processing.job_queue_capacity
+              << ",\"queue_overflow\":\""
+              << deepstream_runtime::queue_overflow_name(
+                     config.processing.queue_overflow)
+              << "\"}}\n";
     return 0;
   }
   if (print_graph) {
@@ -60,4 +68,3 @@ int main(int argc, char** argv) {
   std::cerr << "runtime unavailable: GPU pipeline activation requires server qualification\n";
   return 69;
 }
-
