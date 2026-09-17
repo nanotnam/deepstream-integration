@@ -4,17 +4,19 @@ Generated and private material is ignored:
 
 ```text
 .local/
-  import/axis-alpr/
-    sources/
-    calibration/
-    datasets/
-    evidence/
+  models/<bundle>/
+    vehicle.onnx
+    plate.onnx
+    lprnet.onnx
+  calibration/
+  datasets/
+  evidence/
   engines/<bundle>/<engine-key>/
   reports/
 archive/
 ```
 
-Do not copy ACAP credentials, `.env` files, EAPs, ARTPEC TFLites, or historical
-conversion workspaces. Verify imported assets against a SHA-256 transfer manifest.
-Model bundle validation checks the selected ONNX files again before engine generation.
-
+Only the three source ONNX models are required to build FP16 engines. Calibration data
+is needed later for INT8. Do not copy credentials, `.env` files, or historical
+conversion workspaces. Model bundle validation checks the selected ONNX files against
+their tracked SHA-256 hashes before engine generation.

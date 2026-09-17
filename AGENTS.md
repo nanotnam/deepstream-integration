@@ -4,7 +4,7 @@
 
 `apps/traffic-alpr/` owns the deployable service, profiles, model bundle descriptors,
 and operating documentation. `libs/alpr-core/` is C++17 and platform-neutral: it must
-not include CUDA, TensorRT, GStreamer, DeepStream, or Axis headers.
+not include CUDA, TensorRT, GStreamer, DeepStream, or vendor-specific headers.
 `libs/deepstream-runtime/` owns configuration and runtime orchestration. DeepStream ABI
 adapters live under `plugins/`. The Python environment under `tools/model-builder/` is
 isolated and must never become a runtime dependency.
@@ -30,4 +30,3 @@ Never log RTSP URLs containing credentials, Kafka secrets, or local private path
 model bundle is identified by source hashes, preprocessing, parser ABI, precision, SDK,
 TensorRT, GPU compute capability, and batch size. TensorRT engines are target-specific
 generated files, not source artifacts.
-

@@ -33,10 +33,10 @@ Batch size controls how jobs are grouped, not whether they are admitted.
 
 ## Private artifacts
 
-Place imported Axis sources under `.local/import/axis-alpr/` and generated TensorRT
-plans under `.local/engines/`. ONNX files, engines, calibration images, datasets,
-credentials, and evidence are ignored. The `archive/` tree is reference-only and must
-never become a build or include dependency.
+Place the three private ONNX inputs under `.local/models/1.0.0/` and generated
+TensorRT plans under `.local/engines/`. ONNX files, engines, calibration images,
+datasets, credentials, and evidence are ignored. Nothing in the build or runtime
+depends on another repository.
 
 See the [local verification record](docs/local-verification.md),
 [operations](apps/traffic-alpr/docs/operations.md), and the
