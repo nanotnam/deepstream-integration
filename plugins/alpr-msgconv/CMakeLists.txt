@@ -1,4 +1,4 @@
 add_library(nvds_msgconv_alpr SHARED src/payload_adapter.cpp)
 target_link_libraries(nvds_msgconv_alpr PRIVATE alpr_core deepstream_runtime)
 project_warnings(nvds_msgconv_alpr)
-
+install(TARGETS nvds_msgconv_alpr LIBRARY DESTINATION lib)

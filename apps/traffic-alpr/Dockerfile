@@ -9,10 +9,11 @@ COPY . /workspace
 RUN cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release \
       -DDEEPSTREAM_SDK_ROOT=/opt/nvidia/deepstream/deepstream && \
     cmake --build build --parallel && \
-    ctest --test-dir build --output-on-failure
+    ctest --test-dir build --output-on-failure && \
+    cmake --install build --prefix /opt/mbfs
 
 RUN useradd --create-home --uid 10001 alpr && \
-    install -D -m 0755 build/apps/traffic-alpr/traffic-alpr /opt/mbfs/bin/traffic-alpr
+    chown -R alpr:alpr /opt/mbfs
+ENV LD_LIBRARY_PATH=/opt/mbfs/lib:${LD_LIBRARY_PATH}
 USER alpr
 ENTRYPOINT ["/opt/mbfs/bin/traffic-alpr"]
-
