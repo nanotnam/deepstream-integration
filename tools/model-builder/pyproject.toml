@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mbfs-deepstream-model-builder"
+version = "0.1.0"
+description = "Validate ALPR ONNX contracts and build target-specific TensorRT engines"
+requires-python = ">=3.10"
+dependencies = ["PyYAML>=6.0", "numpy>=1.24"]
+
+[project.optional-dependencies]
+reference = ["onnxruntime>=1.18", "Pillow>=10"]
+test = ["pytest>=7", "jsonschema>=4"]
+
+[project.scripts]
+ds-model = "ds_model.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]

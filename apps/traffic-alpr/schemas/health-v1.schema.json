@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mbfs.example/schemas/alpr-health-v1.json",
+  "title": "MBFS ALPR health event",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "source_id", "observed_at", "state", "fps", "frames", "publishing", "model_bundle", "precision"],
+  "properties": {
+    "schema": {"const": "mbfs.alpr.health.v1"},
+    "source_id": {"type": "string", "minLength": 1},
+    "observed_at": {"type": "string", "format": "date-time"},
+    "state": {"enum": ["starting", "running", "degraded", "reconnecting", "stopping"]},
+    "fps": {"type": "number", "minimum": 0},
+    "frames": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["input", "processed", "dropped"],
+      "properties": {
+        "input": {"type": "integer", "minimum": 0},
+        "processed": {"type": "integer", "minimum": 0},
+        "dropped": {"type": "integer", "minimum": 0}
+      }
+    },
+    "publishing": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["events", "failures"],
+      "properties": {
+        "events": {"type": "integer", "minimum": 0},
+        "failures": {"type": "integer", "minimum": 0}
+      }
+    },
+    "model_bundle": {"type": "string", "minLength": 1},
+    "precision": {"enum": ["fp16", "int8"]}
+  }
+}
+

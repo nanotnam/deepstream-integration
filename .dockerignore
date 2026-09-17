@@ -1,0 +1,15 @@
+.git
+.local
+archive
+build
+.cache
+.venv
+**/__pycache__
+**/.pytest_cache
+**/*.onnx
+**/*.engine
+**/*.plan
+**/*.mp4
+**/*.mkv
+**/.env
+

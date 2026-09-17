@@ -1,0 +1,15 @@
+function(native_test name)
+  add_executable(${name} ${name}.cpp)
+  target_link_libraries(${name} PRIVATE alpr_core deepstream_runtime)
+  target_compile_definitions(${name} PRIVATE TEST_SOURCE_DIR="${PROJECT_SOURCE_DIR}")
+  target_include_directories(${name} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+  target_compile_options(${name} PRIVATE -Wall -Wextra -Wpedantic -Werror -UNDEBUG)
+  add_test(NAME ${name} COMMAND ${name})
+endfunction()
+
+native_test(detection_test)
+native_test(geometry_ocr_test)
+native_test(scheduling_event_test)
+native_test(config_test)
+native_test(metadata_test)
+

@@ -1,0 +1,8 @@
+moto
+truck
+bike
+car
+pedestrian
+bus
+ba_gac
+

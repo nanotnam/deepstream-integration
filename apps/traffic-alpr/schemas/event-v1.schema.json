@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mbfs.example/schemas/alpr-event-v1.json",
+  "title": "MBFS ALPR finalized event",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "event_id", "source_id", "track_id", "observed_at", "frame_pts_ns", "vehicle", "plate", "model_bundle", "precision"],
+  "properties": {
+    "schema": {"const": "mbfs.alpr.event.v1"},
+    "event_id": {"type": "string", "pattern": "^evt-[0-9a-f]{32}$"},
+    "source_id": {"type": "string", "minLength": 1},
+    "track_id": {"type": "integer", "minimum": 0},
+    "observed_at": {"type": "string", "format": "date-time"},
+    "frame_pts_ns": {"type": "integer", "minimum": 0},
+    "vehicle": {"$ref": "#/$defs/detection"},
+    "plate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["text", "confidence", "detection_confidence", "box"],
+      "properties": {
+        "text": {"type": "string", "pattern": "^[A-Z0-9 ]+$"},
+        "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+        "detection_confidence": {"type": "number", "minimum": 0, "maximum": 1},
+        "box": {"$ref": "#/$defs/box"}
+      }
+    },
+    "model_bundle": {"type": "string", "minLength": 1},
+    "precision": {"enum": ["fp16", "int8"]}
+  },
+  "$defs": {
+    "box": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["x", "y", "width", "height"],
+      "properties": {
+        "x": {"type": "number", "minimum": 0, "maximum": 1},
+        "y": {"type": "number", "minimum": 0, "maximum": 1},
+        "width": {"type": "number", "minimum": 0, "maximum": 1},
+        "height": {"type": "number", "minimum": 0, "maximum": 1}
+      }
+    },
+    "detection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["class_id", "class", "confidence", "box"],
+      "properties": {
+        "class_id": {"type": "integer", "minimum": 0},
+        "class": {"type": "string", "minLength": 1},
+        "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+        "box": {"$ref": "#/$defs/box"}
+      }
+    }
+  }
+}
+

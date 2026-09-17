@@ -1,0 +1,40 @@
+schema: mbfs.deepstream-pipeline/v1
+source:
+  id: camera-01
+  type: rtsp
+  uri_env: ALPR_SOURCE_URI
+  width: 1920
+  height: 1080
+  framerate: 30
+  latency_ms: 200
+models:
+  bundle: 1.0.0
+  precision: fp16
+  engine_root: .local/engines
+tracker:
+  type: nvdcf
+  config: /opt/nvidia/deepstream/deepstream/samples/configs/deepstream-app/config_tracker_NvDCF_perf.yml
+alpr:
+  vehicle_threshold: 0.6
+  plate_threshold: 0.3
+  vehicle_iou_threshold: 0.3
+  plate_iou_threshold: 0.4
+  max_plate_jobs_per_frame: 3
+  max_lpr_jobs_per_frame: 2
+  plate_cache_frames: 12
+  lpr_retry_frames: 8
+  minimum_finalize_observations: 3
+  maximum_values_per_index: 10
+  character_lock_confidence: 0.9
+  recognition_zone: [[0,0],[1,0],[1,1],[0,1]]
+outputs:
+  stdout:
+    enabled: true
+  kafka:
+    enabled: true
+    brokers_env: ALPR_KAFKA_BROKERS
+    event_topic: mbfs.alpr.events.v1
+    health_topic: mbfs.alpr.health.v1
+health:
+  interval_seconds: 5
+

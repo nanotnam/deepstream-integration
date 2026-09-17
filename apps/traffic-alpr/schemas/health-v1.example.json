@@ -1,0 +1,12 @@
+{
+  "schema": "mbfs.alpr.health.v1",
+  "source_id": "camera-01",
+  "observed_at": "2026-09-17T00:00:00Z",
+  "state": "running",
+  "fps": 30.0,
+  "frames": {"input": 300, "processed": 299, "dropped": 1},
+  "publishing": {"events": 2, "failures": 0},
+  "model_bundle": "1.0.0",
+  "precision": "fp16"
+}
+

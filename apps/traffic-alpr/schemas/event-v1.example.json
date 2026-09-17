@@ -1,0 +1,23 @@
+{
+  "schema": "mbfs.alpr.event.v1",
+  "event_id": "evt-0123456789abcdef0123456789abcdef",
+  "source_id": "camera-01",
+  "track_id": 42,
+  "observed_at": "2026-09-17T00:00:00Z",
+  "frame_pts_ns": 1000,
+  "vehicle": {
+    "class_id": 3,
+    "class": "car",
+    "confidence": 0.9,
+    "box": {"x": 0.1, "y": 0.2, "width": 0.3, "height": 0.4}
+  },
+  "plate": {
+    "text": "89AA 15689",
+    "confidence": 0.95,
+    "detection_confidence": 0.8,
+    "box": {"x": 0.2, "y": 0.3, "width": 0.1, "height": 0.05}
+  },
+  "model_bundle": "1.0.0",
+  "precision": "fp16"
+}
+
