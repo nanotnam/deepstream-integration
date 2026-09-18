@@ -38,6 +38,7 @@ outputs:
   kafka:
     enabled: true
     brokers_env: ALPR_KAFKA_BROKERS
+    adapter_config: /opt/mbfs/share/traffic-alpr/configs/kafka-adapter.ini
     event_topic: mbfs.alpr.events.v1
     health_topic: mbfs.alpr.health.v1
     queue_capacity: 1024

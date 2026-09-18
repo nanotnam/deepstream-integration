@@ -1,0 +1,20 @@
+topics:
+  - name: mbfs.alpr.events.v1
+    partitions: 3
+    cleanup_policy: delete
+    retention_ms: 604800000
+    key: source_id
+  - name: mbfs.alpr.health.v1
+    partitions: 3
+    cleanup_policy: compact
+    key: source_id
+  - name: mbfs.alpr.events.retry.v1
+    partitions: 3
+    cleanup_policy: delete
+    retention_ms: 604800000
+    key: event_id
+  - name: mbfs.alpr.events.dlq.v1
+    partitions: 3
+    cleanup_policy: delete
+    retention_ms: 2592000000
+    key: original_record_key
