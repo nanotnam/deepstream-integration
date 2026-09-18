@@ -1,7 +1,10 @@
 #include "alpr/detection.hpp"
 #include "alpr_deepstream/parser_contract.hpp"
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmissing-field-initializers"
 #include <nvdsinfer_custom_impl.h>
+#pragma GCC diagnostic pop
 
 #include <cstddef>
 #include <cstdint>
@@ -78,7 +81,10 @@ extern "C" bool NvDsInferParseMbfsVehicle(
   append(detections, network.width, network.height, &objects);
   return true;
 }
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-parameter"
 CHECK_CUSTOM_PARSE_FUNC_PROTOTYPE(NvDsInferParseMbfsVehicle);
+#pragma GCC diagnostic pop
 
 extern "C" bool NvDsInferParseMbfsPlate(
     const std::vector<NvDsInferLayerInfo>& layers,
@@ -100,5 +106,7 @@ extern "C" bool NvDsInferParseMbfsPlate(
   if (found) append({plate.detection}, network.width, network.height, &objects);
   return true;
 }
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-parameter"
 CHECK_CUSTOM_PARSE_FUNC_PROTOTYPE(NvDsInferParseMbfsPlate);
-
+#pragma GCC diagnostic pop

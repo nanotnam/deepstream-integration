@@ -21,6 +21,8 @@ struct SourceConfig {
   uint32_t height{1080};
   double framerate{30.0};
   uint32_t latency_ms{200};
+  uint32_t reconnect_initial_ms{1000};
+  uint32_t reconnect_maximum_ms{30000};
 };
 
 struct ModelConfig {
@@ -32,6 +34,7 @@ struct ModelConfig {
 struct TrackerConfig {
   std::string type{"nvdcf"};
   std::filesystem::path config;
+  size_t exit_grace_frames{150};
 };
 
 enum class QueueOverflow { kBlock };
@@ -49,6 +52,7 @@ struct KafkaConfig {
   std::string brokers_env{"ALPR_KAFKA_BROKERS"};
   std::string event_topic{"mbfs.alpr.events.v1"};
   std::string health_topic{"mbfs.alpr.health.v1"};
+  size_t queue_capacity{1024};
 };
 
 struct OutputConfig {
@@ -60,6 +64,10 @@ struct HealthConfig {
   uint32_t interval_seconds{5};
 };
 
+struct RuntimeConfig {
+  uint32_t shutdown_timeout_seconds{30};
+};
+
 struct PipelineConfig {
   std::string schema;
   SourceConfig source;
@@ -69,6 +77,7 @@ struct PipelineConfig {
   alpr::Settings alpr;
   OutputConfig outputs;
   HealthConfig health;
+  RuntimeConfig runtime;
 };
 
 using EnvironmentLookup = std::function<const char*(const char*)>;

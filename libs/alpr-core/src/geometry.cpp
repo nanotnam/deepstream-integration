@@ -129,24 +129,30 @@ bool is_two_line_plate(const std::array<Point, 5>& keypoints) {
   return height > 1e-3F && distance(keypoints[0], keypoints[1]) / height < 2.3F;
 }
 
-bool rectify_plate_bgr(const ImageView& image, const PlateDetection& plate,
-                       std::vector<uint8_t>* output, std::string* error) {
-  if (!valid_image(image, error)) return false;
+bool plate_rectification_transform(uint32_t image_width, uint32_t image_height,
+                                   const PlateDetection& plate,
+                                   std::array<double, 9>* transform,
+                                   bool* two_line, std::string* error) {
+  if (image_width == 0U || image_height == 0U || transform == nullptr ||
+      two_line == nullptr) {
+    *error = "plate rectification dimensions and outputs must be valid";
+    return false;
+  }
   std::array<Point, 4> source{};
   const bool use_keypoints = valid_plate_keypoints(plate.keypoints);
   if (use_keypoints) {
     source = {plate.keypoints[0], plate.keypoints[1], plate.keypoints[4],
               plate.keypoints[3]};
     for (Point& point : source) {
-      point.x *= image.width;
-      point.y *= image.height;
+      point.x *= image_width;
+      point.y *= image_height;
     }
   } else {
     const Box& box = plate.detection.box;
-    const float left = box.x * image.width;
-    const float top = box.y * image.height;
-    const float right = (box.x + box.width) * image.width;
-    const float bottom = (box.y + box.height) * image.height;
+    const float left = box.x * image_width;
+    const float top = box.y * image_height;
+    const float right = (box.x + box.width) * image_width;
+    const float bottom = (box.y + box.height) * image_height;
     if (right <= left + 2.0F || bottom <= top + 2.0F) {
       *error = "plate keypoints and fallback box are invalid";
       return false;
@@ -157,13 +163,22 @@ bool rectify_plate_bgr(const ImageView& image, const PlateDetection& plate,
                                           {kOutputWidth - 1.0F, 0.0F},
                                           {kOutputWidth - 1.0F, kOutputHeight - 1.0F},
                                           {0.0F, kOutputHeight - 1.0F}}};
-  std::array<double, 9> transform{};
-  if (!homography(destination, source, &transform)) {
+  if (!homography(destination, source, transform)) {
     *error = "plate homography is singular";
     return false;
   }
+  *two_line = use_keypoints && is_two_line_plate(plate.keypoints);
+  return true;
+}
+
+bool rectify_plate_bgr(const ImageView& image, const PlateDetection& plate,
+                       std::vector<uint8_t>* output, std::string* error) {
+  if (!valid_image(image, error)) return false;
+  std::array<double, 9> transform{};
+  bool two_line = false;
+  if (!plate_rectification_transform(image.width, image.height, plate, &transform,
+                                     &two_line, error)) return false;
   output->assign(static_cast<size_t>(kOutputWidth) * kOutputHeight * 3U, 0U);
-  const bool two_line = use_keypoints && is_two_line_plate(plate.keypoints);
   for (int y = 0; y < kOutputHeight; ++y) {
     for (int x = 0; x < kOutputWidth; ++x) {
       std::array<float, 3> pixel{};
@@ -192,4 +207,3 @@ bool rectify_plate_bgr(const ImageView& image, const PlateDetection& plate,
 }
 
 }  // namespace alpr
-

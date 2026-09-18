@@ -184,8 +184,9 @@ bool set_values(const std::map<std::string, std::string>& values,
   const std::set<std::string> known{
       "schema", "source.id", "source.type", "source.uri", "source.uri_env",
       "source.width", "source.height", "source.framerate", "source.latency_ms",
+      "source.reconnect_initial_ms", "source.reconnect_maximum_ms",
       "models.bundle", "models.precision", "models.engine_root", "tracker.type",
-      "tracker.config", "processing.max_fps", "processing.plate_batch_size",
+      "tracker.config", "tracker.exit_grace_frames", "processing.max_fps", "processing.plate_batch_size",
       "processing.lpr_batch_size", "processing.job_queue_capacity",
       "processing.queue_overflow", "alpr.vehicle_threshold", "alpr.plate_threshold",
       "alpr.vehicle_iou_threshold", "alpr.plate_iou_threshold",
@@ -193,7 +194,8 @@ bool set_values(const std::map<std::string, std::string>& values,
       "alpr.character_lock_confidence", "alpr.recognition_zone",
       "outputs.stdout.enabled", "outputs.kafka.enabled", "outputs.kafka.brokers_env",
       "outputs.kafka.event_topic", "outputs.kafka.health_topic",
-      "health.interval_seconds"};
+      "outputs.kafka.queue_capacity", "health.interval_seconds",
+      "runtime.shutdown_timeout_seconds"};
   for (const auto& [key, value] : values) {
     static_cast<void>(value);
     if (known.count(key) == 0U) {
@@ -228,6 +230,14 @@ bool set_values(const std::map<std::string, std::string>& values,
   }
   if (const auto* value = get("source.latency_ms"); value && !integer_value(*value, &config->source.latency_ms)) {
     *error = "source.latency_ms must be an integer"; return false;
+  }
+  if (const auto* value = get("source.reconnect_initial_ms");
+      value && !integer_value(*value, &config->source.reconnect_initial_ms)) {
+    *error = "source.reconnect_initial_ms must be an integer"; return false;
+  }
+  if (const auto* value = get("source.reconnect_maximum_ms");
+      value && !integer_value(*value, &config->source.reconnect_maximum_ms)) {
+    *error = "source.reconnect_maximum_ms must be an integer"; return false;
   }
   if (const auto* value = get("models.bundle")) config->models.bundle = *value;
   if (const auto* value = get("models.precision")) {
@@ -264,6 +274,7 @@ bool set_values(const std::map<std::string, std::string>& values,
   SET_SIZE("processing.plate_batch_size", config->processing.plate_batch_size)
   SET_SIZE("processing.lpr_batch_size", config->processing.lpr_batch_size)
   SET_SIZE("processing.job_queue_capacity", config->processing.job_queue_capacity)
+  SET_SIZE("tracker.exit_grace_frames", config->tracker.exit_grace_frames)
   SET_SIZE("alpr.minimum_finalize_observations", config->alpr.minimum_finalize_observations)
   SET_SIZE("alpr.maximum_values_per_index", config->alpr.maximum_values_per_index)
   SET_FLOAT("alpr.character_lock_confidence", config->alpr.character_lock_confidence)
@@ -285,9 +296,17 @@ bool set_values(const std::map<std::string, std::string>& values,
   if (const auto* value = get("outputs.kafka.brokers_env")) config->outputs.kafka.brokers_env = *value;
   if (const auto* value = get("outputs.kafka.event_topic")) config->outputs.kafka.event_topic = *value;
   if (const auto* value = get("outputs.kafka.health_topic")) config->outputs.kafka.health_topic = *value;
+  if (const auto* value = get("outputs.kafka.queue_capacity");
+      value && !integer_value(*value, &config->outputs.kafka.queue_capacity)) {
+    *error = "outputs.kafka.queue_capacity must be an integer"; return false;
+  }
   if (const auto* value = get("health.interval_seconds");
       value && !integer_value(*value, &config->health.interval_seconds)) {
     *error = "health.interval_seconds must be an integer"; return false;
+  }
+  if (const auto* value = get("runtime.shutdown_timeout_seconds");
+      value && !integer_value(*value, &config->runtime.shutdown_timeout_seconds)) {
+    *error = "runtime.shutdown_timeout_seconds must be an integer"; return false;
   }
   return true;
 }
@@ -332,12 +351,21 @@ bool validate_pipeline_config(const PipelineConfig& config, std::string* error) 
     *error = "source dimensions and framerate are invalid";
     return false;
   }
+  if (config.source.reconnect_initial_ms == 0U ||
+      config.source.reconnect_maximum_ms < config.source.reconnect_initial_ms) {
+    *error = "source reconnect bounds are invalid";
+    return false;
+  }
   if (config.models.bundle.empty() || config.models.engine_root.empty()) {
     *error = "models.bundle and models.engine_root are required";
     return false;
   }
   if (config.tracker.type != "nvdcf" || config.tracker.config.empty()) {
     *error = "tracker.type must be nvdcf and tracker.config is required";
+    return false;
+  }
+  if (config.tracker.exit_grace_frames == 0U) {
+    *error = "tracker.exit_grace_frames must be positive";
     return false;
   }
   if (!std::isfinite(config.processing.max_fps) || config.processing.max_fps < 0.0 ||
@@ -384,12 +412,17 @@ bool validate_pipeline_config(const PipelineConfig& config, std::string* error) 
   if (config.outputs.kafka.enabled &&
       (config.outputs.kafka.brokers_env.empty() ||
        !valid_topic(config.outputs.kafka.event_topic) ||
-       !valid_topic(config.outputs.kafka.health_topic))) {
+       !valid_topic(config.outputs.kafka.health_topic) ||
+       config.outputs.kafka.queue_capacity == 0U)) {
     *error = "enabled Kafka output requires broker environment and valid topics";
     return false;
   }
   if (config.health.interval_seconds == 0U) {
     *error = "health.interval_seconds must be positive";
+    return false;
+  }
+  if (config.runtime.shutdown_timeout_seconds == 0U) {
+    *error = "runtime.shutdown_timeout_seconds must be positive";
     return false;
   }
   return true;

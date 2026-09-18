@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.20)
 project(deepstream_integration VERSION 0.1.0 LANGUAGES CXX)
 
 find_package(Threads REQUIRED)
+find_package(OpenSSL REQUIRED)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -11,7 +12,8 @@ option(BUILD_TESTING "Build native tests" ON)
 set(DEEPSTREAM_SDK_ROOT "" CACHE PATH "DeepStream SDK root; empty builds the portable local surface")
 
 function(project_warnings target)
-  target_compile_options(${target} PRIVATE -Wall -Wextra -Wpedantic -Werror)
+  target_compile_options(${target} PRIVATE
+    $<$<COMPILE_LANGUAGE:CXX>:-Wall;-Wextra;-Wpedantic;-Werror>)
 endfunction()
 
 add_subdirectory(libs/alpr-core)

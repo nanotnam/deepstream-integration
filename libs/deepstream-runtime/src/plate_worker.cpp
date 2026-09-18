@@ -40,6 +40,7 @@ void PlateWorker::run() {
     try {
       failures = handler_(batch);
       if (failures > batch.size()) failures = batch.size();
+      if (failures > 0U) ++failed_batches_;
     } catch (...) {
       failures = batch.size();
       ++failed_batches_;

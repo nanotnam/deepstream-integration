@@ -1,5 +1,6 @@
 #include "deepstream_runtime/config.hpp"
 #include "deepstream_runtime/pipeline_description.hpp"
+#include "deepstream_runtime/pipeline_runner.hpp"
 
 #include <cstdlib>
 #include <iostream>
@@ -60,11 +61,8 @@ int main(int argc, char** argv) {
     std::cout << deepstream_runtime::pipeline_description(config) << '\n';
     return 0;
   }
-  if (!deepstream_runtime::deepstream_runtime_compiled()) {
-    std::cerr << "runtime unavailable: this is a portable local build; build inside "
-                 "the pinned DeepStream container for GPU execution\n";
-    return 69;
-  }
-  std::cerr << "runtime unavailable: GPU pipeline activation requires server qualification\n";
-  return 69;
+  deepstream_runtime::PipelineRunner runner(std::move(config));
+  const int result = runner.run(&error);
+  if (result != 0 && !error.empty()) std::cerr << error << '\n';
+  return result;
 }

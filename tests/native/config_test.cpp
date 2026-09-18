@@ -19,6 +19,11 @@ int main() {
   assert(config.processing.plate_batch_size == 1U);
   assert(config.processing.lpr_batch_size == 1U);
   assert(config.processing.job_queue_capacity == 256U);
+  assert(config.source.reconnect_initial_ms == 1000U);
+  assert(config.source.reconnect_maximum_ms == 30000U);
+  assert(config.tracker.exit_grace_frames == 150U);
+  assert(config.outputs.kafka.queue_capacity == 1024U);
+  assert(config.runtime.shutdown_timeout_seconds == 30U);
   assert(config.alpr.recognition_zone.size() == 4U);
   assert(deepstream_runtime::pipeline_description(config).find("nvinfer[plate,batch=1]") !=
          std::string::npos);
