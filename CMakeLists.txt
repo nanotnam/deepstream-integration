@@ -9,24 +9,27 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 option(BUILD_TESTING "Build native tests" ON)
+option(BUILD_TRAFFIC_ALPR "Build the Traffic ALPR application" ON)
+option(BUILD_APP_TEMPLATE "Build the example application template" OFF)
 set(DEEPSTREAM_SDK_ROOT "" CACHE PATH "DeepStream SDK root; empty builds the portable local surface")
+
+if(BUILD_TESTING)
+  enable_testing()
+endif()
 
 function(project_warnings target)
   target_compile_options(${target} PRIVATE
     $<$<COMPILE_LANGUAGE:CXX>:-Wall;-Wextra;-Wpedantic;-Werror>)
 endfunction()
 
-add_subdirectory(libs/alpr-core)
+add_subdirectory(libs/service-runtime)
+add_subdirectory(libs/messaging)
 add_subdirectory(libs/deepstream-runtime)
-add_subdirectory(apps/traffic-alpr)
 
-if(DEEPSTREAM_SDK_ROOT)
-  add_subdirectory(plugins/alpr-infer)
-  add_subdirectory(plugins/alpr-preprocess)
-  add_subdirectory(plugins/alpr-msgconv)
+if(BUILD_TRAFFIC_ALPR)
+  add_subdirectory(apps/traffic-alpr)
 endif()
 
-if(BUILD_TESTING)
-  enable_testing()
-  add_subdirectory(tests/native)
+if(BUILD_APP_TEMPLATE)
+  add_subdirectory(apps/app-template)
 endif()

@@ -1,6 +1,6 @@
-#include "deepstream_runtime/config.hpp"
-#include "deepstream_runtime/pipeline_description.hpp"
-#include "deepstream_runtime/pipeline_runner.hpp"
+#include "traffic_alpr/config.hpp"
+#include "traffic_alpr/pipeline_description.hpp"
+#include "traffic_alpr/pipeline_runner.hpp"
 
 #include <cstdlib>
 #include <iostream>
@@ -37,9 +37,9 @@ int main(int argc, char** argv) {
     return 64;
   }
 
-  deepstream_runtime::PipelineConfig config;
+  traffic_alpr::PipelineConfig config;
   std::string error;
-  if (!deepstream_runtime::load_pipeline_config(config_path, &config, &error)) {
+  if (!traffic_alpr::load_pipeline_config(config_path, &config, &error)) {
     std::cerr << "configuration error: " << error << '\n';
     return 65;
   }
@@ -52,16 +52,16 @@ int main(int argc, char** argv) {
               << config.processing.lpr_batch_size << ",\"job_queue_capacity\":"
               << config.processing.job_queue_capacity
               << ",\"queue_overflow\":\""
-              << deepstream_runtime::queue_overflow_name(
+              << traffic_alpr::queue_overflow_name(
                      config.processing.queue_overflow)
               << "\"}}\n";
     return 0;
   }
   if (print_graph) {
-    std::cout << deepstream_runtime::pipeline_description(config) << '\n';
+    std::cout << traffic_alpr::pipeline_description(config) << '\n';
     return 0;
   }
-  deepstream_runtime::PipelineRunner runner(std::move(config));
+  traffic_alpr::PipelineRunner runner(std::move(config));
   const int result = runner.run(&error);
   if (result != 0 && !error.empty()) std::cerr << error << '\n';
   return result;

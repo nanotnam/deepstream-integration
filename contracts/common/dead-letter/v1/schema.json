@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mbfs.example/schemas/dead-letter-v1.json",
+  "title": "MBFS dead-letter envelope",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "source_topic", "source_key", "category", "detail", "payload"],
+  "properties": {
+    "schema": {"const": "mbfs.dead-letter.v1"},
+    "source_topic": {"type": "string", "minLength": 1},
+    "source_key": {"type": "string"},
+    "category": {"type": "string", "minLength": 1},
+    "detail": {"type": "string", "maxLength": 512},
+    "payload": {"type": "string"}
+  }
+}

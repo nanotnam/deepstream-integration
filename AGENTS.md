@@ -2,12 +2,14 @@
 
 ## Boundaries
 
-`apps/traffic-alpr/` owns the deployable service, profiles, model bundle descriptors,
-and operating documentation. `libs/alpr-core/` is C++17 and platform-neutral: it must
-not include CUDA, TensorRT, GStreamer, DeepStream, or vendor-specific headers.
-`libs/deepstream-runtime/` owns configuration and runtime orchestration. DeepStream ABI
-adapters live under `plugins/`. The Python environment under `tools/model-builder/` is
-isolated and must never become a runtime dependency.
+`apps/<app>/` owns each deployable DeepStream application, its domain libraries,
+profiles, model bundle descriptors, SDK plugins, tests, and operating documentation.
+`apps/traffic-alpr/core/` is C++17 and platform-neutral: it must not include CUDA,
+TensorRT, GStreamer, DeepStream, or vendor-specific headers. `libs/` contains only
+cross-application facilities. `contracts/` owns inter-process wire schemas. `kafka/`
+owns broker development infrastructure, while independently deployed consumers live
+under `services/`. The Python environment under `tools/model-builder/` is isolated and
+must never become an inference runtime dependency.
 
 `archive/` is ignored reference material, never an include path or build input. Private
 models, engines, calibration images, datasets, credentials, and generated evidence live

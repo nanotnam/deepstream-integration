@@ -1,0 +1,4 @@
+add_library(service_runtime STATIC src/service_state.cpp)
+target_include_directories(service_runtime PUBLIC include)
+set_target_properties(service_runtime PROPERTIES POSITION_INDEPENDENT_CODE ON)
+project_warnings(service_runtime)

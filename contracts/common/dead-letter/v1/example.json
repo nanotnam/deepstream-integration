@@ -1,0 +1,8 @@
+{
+  "schema": "mbfs.dead-letter.v1",
+  "source_topic": "mbfs.alpr.events.v1",
+  "source_key": "evt-0123456789abcdef0123456789abcdef",
+  "category": "contract",
+  "detail": "required property is missing",
+  "payload": "{}"
+}
