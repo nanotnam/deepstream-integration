@@ -1,6 +1,10 @@
 # Architecture
 
-The production data path is metadata-driven. DeepStream owns decode, batching,
+The workspace separates inference applications from event integration. Each directory
+under `apps/` owns one deployable DeepStream application, including its domain code,
+plugins, profiles, tests, and packaging. Shared libraries remain domain-neutral.
+
+The Traffic ALPR production data path is metadata-driven. DeepStream owns decode, batching,
 TensorRT execution, and tracker IDs. The portable ALPR core owns decoding math,
 rectification semantics, recognition-zone selection, lossless job queuing, CTC,
 voting, and wire payloads.
@@ -11,12 +15,13 @@ source -> optional FPS gate -> decode -> nvstreammux[batch=1]
        -> blocking plate-job queue -> vehicle ROI/plate nvinfer
        -> plate keypoint metadata
        -> 156x32 BGR rectification -> LPRNet -> per-track vote
-       -> event metadata -> stdout and Kafka
+       -> event JSON -> stdout
+                     -> application publisher -> nvds_msgapi Kafka adapter -> Kafka
 ```
 
 DeepStream structs are converted at plugin boundaries into `alpr::TensorView`,
-`alpr::ImageView`, and domain metadata. Nothing in `libs/alpr-core` includes a platform
-SDK. Plate decoding accepts the original ONNX channel-first heads and the historical
+`alpr::ImageView`, and domain metadata. Nothing in `apps/traffic-alpr/core` includes a
+platform SDK. Plate decoding accepts the original ONNX channel-first heads and the historical
 converted channel-last heads, but the tracked model bundle selects the original ONNX
 contract.
 
@@ -39,5 +44,13 @@ The portable build validates contracts, per-frame admission, batching, backpress
 metadata mapping, and algorithms. The DeepStream-only runner owns the application
 graph, direct inference contexts, GPU preprocessing/rectification, engine-set startup
 validation, reconnect state, bounded Kafka publication, and deterministic resource
-cleanup. Production Kafka recovery, numerical parity, and the soak gate remain
-deployment qualification work.
+cleanup. Kafka publication is not a GStreamer `nvmsgconv`/`nvmsgbroker` branch: the
+application hands its completed JSON directly to NVIDIA's `nvds_msgapi` Kafka adapter.
+Production Kafka recovery, numerical parity, and the soak gate remain deployment
+qualification work.
+
+Published JSON crosses a versioned contract boundary in `contracts/`. Kafka broker and
+topic development assets live in `kafka/`; they are not linked into an application.
+The independent `services/event-forwarder` process consumes ALPR events and owns HTTP
+delivery, retries, dead-letter handling, and offset commits. It has no dependency on
+DeepStream, CUDA, TensorRT, or ALPR inference internals.
