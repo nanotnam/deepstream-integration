@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import os
+import re
 import shutil
 import subprocess
 from dataclasses import asdict
@@ -31,7 +33,47 @@ def _gpu_name() -> str:
     return completed.stdout.strip().splitlines()[0] if completed.returncode == 0 else "unknown-gpu"
 
 
-def engine_key(bundle: Bundle, precision: str, trtexec_version: str, gpu: str) -> str:
+def _gpu_compute_capability() -> str:
+    executable = shutil.which("nvidia-smi")
+    if executable is None:
+        return "unknown"
+    completed = subprocess.run(
+        [executable, "--query-gpu=compute_cap", "--format=csv,noheader"],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    return completed.stdout.strip().splitlines()[0] if completed.returncode == 0 else "unknown"
+
+
+def _runtime_version(environment_name: str, fallback: str = "unknown") -> str:
+    value = os.environ.get(environment_name, "").strip()
+    return value or fallback
+
+
+def _tensorrt_version(trtexec_version: str) -> str:
+    configured = _runtime_version("TENSORRT_VERSION", "")
+    if configured:
+        return configured
+    match = re.search(r"TensorRT[^0-9]*([0-9]+(?:\.[0-9]+){1,3})", trtexec_version)
+    if match:
+        return match.group(1)
+    compact = re.search(r"TensorRT\s+v([0-9]+)", trtexec_version)
+    if compact:
+        encoded = int(compact.group(1))
+        return f"{encoded // 10000}.{(encoded // 100) % 100}.{encoded % 100}"
+    return trtexec_version
+
+
+def engine_key(
+    bundle: Bundle,
+    precision: str,
+    trtexec_version: str,
+    gpu: str,
+    compute_capability: str = "unknown",
+    deepstream_version: str = "unknown",
+    cuda_version: str = "unknown",
+) -> str:
     material = json.dumps(
         {
             "bundle": bundle.version,
@@ -41,6 +83,9 @@ def engine_key(bundle: Bundle, precision: str, trtexec_version: str, gpu: str) -
             "batch": 1,
             "trtexec": trtexec_version,
             "gpu": gpu,
+            "gpu_compute_capability": compute_capability,
+            "deepstream": deepstream_version,
+            "cuda": cuda_version,
         },
         sort_keys=True,
         default=list,
@@ -73,11 +118,24 @@ def build_engines(
 
     version = _command_version(executable)
     gpu = _gpu_name()
-    destination = output_root / bundle.version / engine_key(bundle, precision, version, gpu)
+    compute_capability = _gpu_compute_capability()
+    deepstream_version = _runtime_version("DEEPSTREAM_VERSION", "9.1")
+    cuda_version = _runtime_version("CUDA_VERSION")
+    tensorrt_version = _tensorrt_version(version)
+    destination = output_root / bundle.version / engine_key(
+        bundle,
+        precision,
+        tensorrt_version,
+        gpu,
+        compute_capability,
+        deepstream_version,
+        cuda_version,
+    )
     destination.mkdir(parents=True, exist_ok=True)
     report: dict[str, object] = {
         "schema": "mbfs.tensorrt-engine-set/v1",
         "bundle": bundle.version,
+        "parser_abi": bundle.parser_abi,
         "precision": precision,
         "batch_profiles": {
             model.role: {
@@ -89,7 +147,11 @@ def build_engines(
             for model in bundle.models
         },
         "trtexec": version,
+        "tensorrt": tensorrt_version,
+        "deepstream": deepstream_version,
+        "cuda": cuda_version,
         "gpu": gpu,
+        "gpu_compute_capability": compute_capability,
         "workspace_mib": workspace_mib,
         "engines": {},
     }
@@ -99,7 +161,7 @@ def build_engines(
             executable,
             f"--onnx={model.source}",
             f"--saveEngine={engine}",
-            f"--memPoolSize=workspace:{workspace_mib}MiB",
+            f"--memPoolSize=workspace:{workspace_mib}M",
             "--builderOptimizationLevel=3",
             "--skipInference",
             f"--{precision}",
