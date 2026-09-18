@@ -1,0 +1,48 @@
+schema: mbfs.deepstream-pipeline/v1
+source:
+  id: camera-01
+  type: rtsp
+  uri_env: MOTORCYCLE_VIOLATION_SOURCE_URI
+  width: 1920
+  height: 1080
+  framerate: 30
+  latency_ms: 200
+  reconnect_initial_ms: 1000
+  reconnect_maximum_ms: 30000
+models:
+  bundle: 1.0.0
+  precision: fp16
+  engine_root: .local/engines
+tracker:
+  type: nvdcf
+  config: /opt/nvidia/deepstream/deepstream/samples/configs/deepstream-app/config_tracker_NvDCF_perf.yml
+  exit_grace_frames: 150
+processing:
+  max_fps: 0
+  plate_batch_size: 1
+  lpr_batch_size: 1
+  job_queue_capacity: 256
+  queue_overflow: block
+alpr:
+  vehicle_threshold: 0.6
+  plate_threshold: 0.3
+  vehicle_iou_threshold: 0.3
+  plate_iou_threshold: 0.4
+  minimum_finalize_observations: 3
+  maximum_values_per_index: 10
+  character_lock_confidence: 0.9
+  recognition_zone: [[0,0],[1,0],[1,1],[0,1]]
+outputs:
+  stdout:
+    enabled: true
+  kafka:
+    enabled: true
+    brokers_env: MOTORCYCLE_VIOLATION_KAFKA_BROKERS
+    adapter_config: /opt/mbfs/share/motorcycle-violation/configs/kafka-adapter.ini
+    event_topic: mbfs.alpr.events.v1
+    health_topic: mbfs.alpr.health.v1
+    queue_capacity: 1024
+health:
+  interval_seconds: 5
+runtime:
+  shutdown_timeout_seconds: 30
