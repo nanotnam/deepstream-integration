@@ -7,6 +7,8 @@ source:
   height: 1080
   framerate: 30
   latency_ms: 200
+  reconnect_initial_ms: 1000
+  reconnect_maximum_ms: 30000
 models:
   bundle: 1.0.0
   precision: fp16
@@ -14,6 +16,7 @@ models:
 tracker:
   type: nvdcf
   config: /opt/nvidia/deepstream/deepstream/samples/configs/deepstream-app/config_tracker_NvDCF_perf.yml
+  exit_grace_frames: 150
 processing:
   max_fps: 0
   plate_batch_size: 1
@@ -37,5 +40,8 @@ outputs:
     brokers_env: ALPR_KAFKA_BROKERS
     event_topic: mbfs.alpr.events.v1
     health_topic: mbfs.alpr.health.v1
+    queue_capacity: 1024
 health:
   interval_seconds: 5
+runtime:
+  shutdown_timeout_seconds: 30

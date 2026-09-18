@@ -23,6 +23,24 @@ Validate configuration without initializing DeepStream:
 traffic-alpr --config configs/file.yaml --validate-only
 ```
 
+The production container installs profiles under
+`/opt/mbfs/share/traffic-alpr/configs`. Mount generated engine sets at the path
+selected by `models.engine_root` and mount source media read-only. A typical file
+replay invocation is:
+
+```bash
+docker run --rm --gpus all \
+  -e ALPR_SOURCE_URI=file:///data/test.mp4 \
+  -e ALPR_KAFKA_BROKERS=kafka:9092 \
+  -v "$PWD/.local/engines:/opt/mbfs/.local/engines:ro" \
+  -v "$PWD/.local/test-video:/data:ro" \
+  traffic-alpr:local \
+  --config /opt/mbfs/share/traffic-alpr/configs/file.yaml
+```
+
+Do not pass broker credentials on a shared command line. Use the deployment
+platform's secret environment injection when authentication is required.
+
 Print the intended graph:
 
 ```bash
@@ -31,4 +49,7 @@ traffic-alpr --config configs/rtsp.yaml --print-gst-graph
 
 The service emits `mbfs.alpr.event.v1` JSON to `mbfs.alpr.events.v1` and
 `mbfs.alpr.health.v1` JSON to `mbfs.alpr.health.v1`. Kafka failure is degraded service,
-not permission to stop inference. Version 1 does not provide a durable local spool.
+not permission to stop inference. While reconnecting, submissions are rejected and
+counted instead of being retained as a durable local spool. Set
+`outputs.kafka.enabled: false` in a private replay profile when a broker is not yet
+available; stdout output remains independent.

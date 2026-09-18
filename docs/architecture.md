@@ -35,8 +35,9 @@ TensorRT plans are caches, not releases. Their identity includes model hashes, p
 ABI, precision, batch, TensorRT/DeepStream versions, and GPU architecture. The runtime
 must reject an engine-set descriptor that does not match the active bundle/environment.
 
-The local build validates contracts, per-frame admission, batching, backpressure,
-metadata mapping, and algorithms. The plugin sources are narrow ABI adapters;
-attaching plate keypoints from raw tensor metadata, GPU rectification, the complete
-GStreamer application graph, Kafka reconnection, and engine compatibility remain
-GPU-server qualification work.
+The portable build validates contracts, per-frame admission, batching, backpressure,
+metadata mapping, and algorithms. The DeepStream-only runner owns the application
+graph, direct inference contexts, GPU preprocessing/rectification, engine-set startup
+validation, reconnect state, bounded Kafka publication, and deterministic resource
+cleanup. Production Kafka recovery, numerical parity, and the soak gate remain
+deployment qualification work.
